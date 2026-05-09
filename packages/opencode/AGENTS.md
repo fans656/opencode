@@ -9,6 +9,31 @@
 - **Output**: creates `migration/<timestamp>_<slug>/migration.sql` and `snapshot.json`.
 - **Tests**: migration tests should read the per-folder layout (no `_journal.json`).
 
+# Server architecture (two backends)
+
+The server has **two HTTP backend implementations** that share the same routes:
+- **Hono** (`src/server/middleware.ts` → `createHono()` in `server.ts`): traditional Express-like framework.
+- **Effect HttpApi** (`src/server/routes/instance/httpapi/server.ts`): Effect-native framework.
+
+Backend selection is controlled by `Flag.OPENCODE_EXPERIMENTAL_HTTPAPI` (`src/server/backend.ts:13-16`).
+In the `"local"` channel (dev mode without build-time globals), the Effect HttpApi backend is the default because `HTTPAPI_DEFAULT_ON_CHANNELS` includes `"local"` (`packages/core/src/flag/flag.ts:16`).
+
+**IMPORTANT**: When making changes to HTTP-level concerns (CORS, auth, route behavior), you must update **both** backends. The existing parity agreement is documented at `src/server/routes/instance/httpapi/AGENTS.md`.
+
+## CORS
+
+Both backends use `isAllowedRequestOrigin()` from `src/server/cors.ts` which checks:
+1. `localhost:*` / `127.0.0.1:*` (always allowed)
+2. Same hostname (different port OK) via `sameHost()`
+3. Explicit `--cors` origins
+
+- Hono: `CorsMiddleware()` in `src/server/middleware.ts` calls `isAllowedRequestOrigin(input, c.req.header("host"), opts)`
+- Effect HttpApi: custom middleware in `httpapi/server.ts:cors()` calls `isAllowedRequestOrigin(origin, request.headers.host, corsOptions)`
+
+## Dev database
+
+In dev mode (`bun run` without build-time globals), `InstallationChannel = "local"`, so the database file is `~/.local/share/opencode/opencode-local.db` (not `opencode.db`). This avoids conflicting with a production install.
+
 # Module shape
 
 Do not use `export namespace Foo { ... }` for module organization. It is not
