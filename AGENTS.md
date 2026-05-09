@@ -3,6 +3,7 @@
 - The default branch in this repo is `dev`.
 - Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+- Commit frequently after completing a meaningful unit of work. Use the `edit` tool (not `write`) for file modifications to avoid accidental full-file overwrites; if a full rewrite is needed, commit first as a safety net.
 
 ## Style Guide
 
