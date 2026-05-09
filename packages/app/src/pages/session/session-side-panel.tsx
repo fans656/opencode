@@ -265,6 +265,8 @@ export function SessionSidePanel(props: {
     setStore("activeDraggable", undefined)
   }
 
+  const [openRoundID, setOpenRoundID] = createSignal<string | null>(null)
+
   createEffect(() => {
     if (!file.ready()) return
 
@@ -420,12 +422,13 @@ export function SessionSidePanel(props: {
                             <For each={modelIoItems()}>
                               {(item) => {
                                 const info = roundInfo(item)
-                                const [open, setOpen] = createSignal(false)
+                                const isOpen = () => openRoundID() === item.messageID
+                                const toggle = () => setOpenRoundID(openRoundID() === item.messageID ? null : item.messageID)
                                 const kindTip = () => info.icon === "tool_result" ? `Tool result: ${info.fullTitle}` : "User input"
                                 return (
                                   <div class="mb-2 border border-border-base rounded">
-                                    <div class="px-2 py-1 bg-background-strong cursor-pointer flex items-center gap-1 hover:bg-background-stronger" onClick={() => setOpen(!open())}>
-                                      <span class="text-text-weak select-none shrink-0">{open() ? "▾" : "▸"}</span>
+                                    <div class="px-2 py-1 bg-background-strong cursor-pointer flex items-center gap-1 hover:bg-background-stronger" onClick={toggle}>
+                                      <span class="text-text-weak select-none shrink-0">{isOpen() ? "▾" : "▸"}</span>
                                       <Tooltip value={kindTip()} placement="top" gutter={4} openDelay={0} closeDelay={500}>
                                         <span>{info.icon === "tool_result" ? <span class="text-[#7c3aed] text-10">↩</span> : <span class="text-text-weak text-10">👤</span>}</span>
                                       </Tooltip>
@@ -441,7 +444,7 @@ export function SessionSidePanel(props: {
                                         <span class="text-text-weak/50 text-8 shrink-0">{info.id}</span>
                                       </Tooltip>
                                     </div>
-                                    <Show when={open()}>
+                                    <Show when={isOpen()}>
                                       <div class="p-3 space-y-3 border-t border-border-base">
                                         <div>
                                           <div class="text-text-weak/50 text-9 font-medium mb-1">INPUT</div>
@@ -463,6 +466,10 @@ export function SessionSidePanel(props: {
                                               </div>
                                             </div>
                                           </div>
+                                          <details class="mt-2">
+                                            <summary class="text-text-weak cursor-pointer text-10">Raw Request</summary>
+                                            <div class="mt-1 bg-background-base rounded p-2 max-h-72 overflow-auto"><JsonTree value={parseJson(item.request)} /></div>
+                                          </details>
                                         </div>
                                         <div>
                                           <div class="text-text-weak/50 text-9 font-medium mb-1">OUTPUT</div>
@@ -496,11 +503,11 @@ export function SessionSidePanel(props: {
                                                 <span class="text-text-base">{info.finish}</span>
                                               </div>
                                             </Show>
+                                            <details class="mt-2">
+                                              <summary class="text-text-weak cursor-pointer text-10">Raw Response</summary>
+                                              <div class="mt-1 bg-background-base rounded p-2 max-h-72 overflow-auto"><JsonTree value={parseJson(item.response)} /></div>
+                                            </details>
                                           </div>
-                                        </div>
-                                        <div class="border-t border-border-base pt-2 space-y-2">
-                                          <details><summary class="text-text-weak cursor-pointer text-10">Raw Request</summary><div class="mt-1 bg-background-base rounded p-2 max-h-72 overflow-auto"><JsonTree value={parseJson(item.request)} /></div></details>
-                                          <details><summary class="text-text-weak cursor-pointer text-10">Raw Response</summary><div class="mt-1 bg-background-base rounded p-2 max-h-72 overflow-auto"><JsonTree value={parseJson(item.response)} /></div></details>
                                         </div>
                                       </div>
                                     </Show>
@@ -508,7 +515,7 @@ export function SessionSidePanel(props: {
                                 )
                               }}
                             </For>
-                          </Show>
+                            </Show>
                         </div>
                       </Show>
                     </Tabs.Content>
