@@ -515,18 +515,10 @@ export default function Page() {
   const [store, setStore] = createStore({
     messageId: undefined as string | undefined,
     mobileTab: "session" as "session" | "changes",
-    modelView: false,
     changes: "git" as ChangeMode,
     newSessionWorktree: "main",
     deferRender: false,
   })
-
-  const [modelIoHistory] = createResource(
-    () => (store.modelView && params.id ? params.id : false),
-    async (id: string) => {
-      return sdk.client.session.modelIo({ sessionID: id }).then((r) => r.data ?? [])
-    },
-  )
 
   const [followup, setFollowup] = persisted(
     Persist.workspace(sdk.directory, "followup", ["followup.v1"]),
@@ -1805,21 +1797,6 @@ export default function Page() {
     <div class="relative bg-background-base size-full overflow-hidden flex flex-col">
       {sessionSync() ?? ""}
       <SessionHeader />
-      <Show when={!!params.id}>
-        <div class="flex items-center gap-2 px-4 py-1 bg-background-strong border-b border-border-base">
-          <button
-            classList={{
-              "text-12-medium px-2 py-0.5 rounded border transition-colors": true,
-              "bg-accent-base text-accent-contrast border-accent-base": store.modelView,
-              "bg-transparent text-text-weak border-border-base hover:text-text-base hover:border-border-strong":
-                !store.modelView,
-            }}
-            onClick={() => setStore("modelView", !store.modelView)}
-          >
-            Model View
-          </button>
-        </div>
-      </Show>
       <div class="flex-1 min-h-0 flex flex-col md:flex-row">
         <Show when={!isDesktop() && !!params.id}>
           <Tabs value={store.mobileTab} class="h-auto">
@@ -1858,88 +1835,56 @@ export default function Page() {
           }}
         >
           <div class="flex-1 min-h-0 overflow-hidden">
-            <Show
-              when={store.modelView && params.id}
-              fallback={
-                <Switch>
-                  <Match when={params.id}>
-                    <Show when={messagesReady()}>
-                      <MessageTimeline
-                        mobileChanges={mobileChanges()}
-                        mobileFallback={reviewContent({
-                          diffStyle: "unified",
-                          classes: {
-                            root: "pb-8",
-                            header: "px-4",
-                            container: "px-4",
-                          },
-                          loadingClass: "px-4 py-4 text-text-weak",
-                          emptyClass:
-                            "h-full pb-64 -mt-4 flex flex-col items-center justify-center text-center gap-6",
-                        })}
-                        actions={actions}
-                        scroll={ui.scroll}
-                        onResumeScroll={resumeScroll}
-                        setScrollRef={setScrollRef}
-                        onScheduleScrollState={scheduleScrollState}
-                        onAutoScrollHandleScroll={autoScroll.handleScroll}
-                        onMarkScrollGesture={markScrollGesture}
-                        hasScrollGesture={hasScrollGesture}
-                        onUserScroll={markUserScroll}
-                        onTurnBackfillScroll={historyWindow.onScrollerScroll}
-                        onAutoScrollInteraction={autoScroll.handleInteraction}
-                        centered={centered()}
-                        setContentRef={(el) => {
-                          content = el
-                          autoScroll.contentRef(el)
+            <Switch>
+              <Match when={params.id}>
+                <Show when={messagesReady()}>
+                  <MessageTimeline
+                    mobileChanges={mobileChanges()}
+                    mobileFallback={reviewContent({
+                      diffStyle: "unified",
+                      classes: {
+                        root: "pb-8",
+                        header: "px-4",
+                        container: "px-4",
+                      },
+                      loadingClass: "px-4 py-4 text-text-weak",
+                      emptyClass:
+                        "h-full pb-64 -mt-4 flex flex-col items-center justify-center text-center gap-6",
+                    })}
+                    actions={actions}
+                    scroll={ui.scroll}
+                    onResumeScroll={resumeScroll}
+                    setScrollRef={setScrollRef}
+                    onScheduleScrollState={scheduleScrollState}
+                    onAutoScrollHandleScroll={autoScroll.handleScroll}
+                    onMarkScrollGesture={markScrollGesture}
+                    hasScrollGesture={hasScrollGesture}
+                    onUserScroll={markUserScroll}
+                    onTurnBackfillScroll={historyWindow.onScrollerScroll}
+                    onAutoScrollInteraction={autoScroll.handleInteraction}
+                    centered={centered()}
+                    setContentRef={(el) => {
+                      content = el
+                      autoScroll.contentRef(el)
 
-                          const root = scroller
-                          if (root) scheduleScrollState(root)
-                        }}
-                        turnStart={historyWindow.turnStart()}
-                        historyMore={historyMore()}
-                        historyLoading={historyLoading()}
-                        onLoadEarlier={() => {
-                          void historyWindow.loadAndReveal()
-                        }}
-                        renderedUserMessages={historyWindow.renderedUserMessages()}
-                        anchor={anchor}
-                      />
-                    </Show>
-                  </Match>
+                      const root = scroller
+                      if (root) scheduleScrollState(root)
+                    }}
+                    turnStart={historyWindow.turnStart()}
+                    historyMore={historyMore()}
+                    historyLoading={historyLoading()}
+                    onLoadEarlier={() => {
+                      void historyWindow.loadAndReveal()
+                    }}
+                    renderedUserMessages={historyWindow.renderedUserMessages()}
+                    anchor={anchor}
+                  />
+                </Show>
+              </Match>
               <Match when={true}>
                 <NewSessionView worktree={newSessionWorktree()} />
               </Match>
             </Switch>
-          }>
-            <div class="h-full overflow-auto p-4 font-mono text-12">
-              <For each={modelIoHistory() ?? (sync.data.model_io?.[params.id!] ?? [])}>
-                {(item) => (
-                  <div class="mb-6 border border-border-base rounded">
-                    <div class="px-3 py-1 bg-background-strong text-text-weak text-11 font-medium">
-                      Step — {item.messageID}
-                    </div>
-                    <div class="p-3 space-y-3">
-                      <details open>
-                        <summary class="text-text-base cursor-pointer font-medium py-1">
-                          Request (ModelMessage[])
-                        </summary>
-                        <pre class="mt-1 whitespace-pre-wrap break-all text-text-weak max-h-96 overflow-auto">
-                          {JSON.stringify(JSON.parse(item.request), null, 2)}
-                        </pre>
-                      </details>
-                      <details open>
-                        <summary class="text-text-base cursor-pointer font-medium py-1">Response</summary>
-                        <pre class="mt-1 whitespace-pre-wrap break-all text-text-weak max-h-96 overflow-auto">
-                          {JSON.stringify(JSON.parse(item.response), null, 2)}
-                        </pre>
-                      </details>
-                    </div>
-                  </div>
-                )}
-              </For>
-            </div>
-          </Show>
           </div>
 
           <SessionComposerRegion
@@ -2019,6 +1964,7 @@ export default function Page() {
           activeDiff={tree.activeDiff}
           focusReviewDiff={focusReviewDiff}
           reviewSnap={ui.reviewSnap}
+          sessionID={params.id}
           size={size}
         />
       </div>
