@@ -11,7 +11,7 @@ import { basicAuth } from "hono/basic-auth"
 import { cors } from "hono/cors"
 import { compress } from "hono/compress"
 import * as ServerBackend from "./backend"
-import { isAllowedCorsOrigin, type CorsOptions } from "./cors"
+import { isAllowedRequestOrigin, type CorsOptions } from "./cors"
 import { isPtyConnectPath, PTY_CONNECT_TICKET_QUERY } from "./shared/pty-ticket"
 import { isPublicUIPath } from "./shared/public-ui"
 
@@ -75,8 +75,8 @@ export function LoggerMiddleware(backendAttributes: ServerBackend.Attributes): M
 export function CorsMiddleware(opts?: CorsOptions): MiddlewareHandler {
   return cors({
     maxAge: 86_400,
-    origin(input) {
-      if (isAllowedCorsOrigin(input, opts)) return input
+    origin(input, c) {
+      if (isAllowedRequestOrigin(input, c.req.header("host"), opts)) return input
     },
   })
 }

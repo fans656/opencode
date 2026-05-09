@@ -27,7 +27,9 @@ export function isAllowedRequestOrigin(input: string | undefined, host: string |
 
 function sameHost(origin: string, host: string) {
   try {
-    return new URL(origin).host === host
+    const originHost = new URL(origin).hostname
+    const reqHost = host.includes(":") ? host.split(":")[0] : host
+    return originHost === reqHost
   } catch {
     return false
   }

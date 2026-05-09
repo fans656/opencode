@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { FetchHttpClient, HttpClient, HttpMiddleware, HttpRouter, HttpServer } from "effect/unstable/http"
+import { FetchHttpClient, HttpClient, HttpRouter, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Account } from "@/account/account"
@@ -45,7 +45,7 @@ import { lazy } from "@/util/lazy"
 import { Vcs } from "@/project/vcs"
 import { Worktree } from "@/worktree"
 import { Workspace } from "@/control-plane/workspace"
-import { CorsConfig, isAllowedCorsOrigin, type CorsOptions } from "@/server/cors"
+import { CorsConfig, isAllowedRequestOrigin, type CorsOptions } from "@/server/cors"
 import { serveUIEffect } from "@/server/shared/ui"
 import { ServerAuth } from "@/server/auth"
 import { InstanceHttpApi, RootHttpApi } from "./api"
@@ -89,9 +89,42 @@ const runtime = HttpRouter.middleware()(
 
 const cors = (corsOptions?: CorsOptions) =>
   HttpRouter.middleware(
-    HttpMiddleware.cors({
-      allowedOrigins: (origin) => isAllowedCorsOrigin(origin, corsOptions),
-      maxAge: 86_400,
+    Effect.gen(function* () {
+      return (effect: Effect.Effect<HttpServerResponse.HttpServerResponse>) =>
+        Effect.gen(function* () {
+          const request = yield* HttpServerRequest.HttpServerRequest
+          const origin = request.headers.origin
+          const host = request.headers.host
+          const method = request.method
+
+          if (method === "OPTIONS") {
+            const allowed = origin
+              ? isAllowedRequestOrigin(origin, host, corsOptions)
+                ? { "access-control-allow-origin": origin, vary: "Origin" }
+                : undefined
+              : undefined
+            const headers: Record<string, string> = {
+              ...allowed,
+              "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
+              "access-control-max-age": "86400",
+            }
+            const reqHeaders = request.headers["access-control-request-headers"]
+            if (reqHeaders) {
+              headers["access-control-allow-headers"] = reqHeaders
+              headers.vary = headers.vary ? headers.vary + ", Access-Control-Request-Headers" : "Access-Control-Request-Headers"
+            }
+            return HttpServerResponse.empty({ status: 204, headers })
+          }
+
+          const resp = yield* effect
+          if (!origin) return resp
+          if (isAllowedRequestOrigin(origin, host, corsOptions))
+            return HttpServerResponse.setHeaders(resp, {
+              "access-control-allow-origin": origin,
+              vary: "Origin",
+            })
+          return resp
+        })
     }),
     { global: true },
   )
