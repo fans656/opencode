@@ -344,8 +344,8 @@ export function SessionSidePanel(props: {
                         </Tabs.Trigger>
                       </Show>
                       <Show when={reviewTab() && !!props.sessionID}>
-                        <Tabs.Trigger value="modelView">
-                          <div class="flex items-center gap-1.5">Model View</div>
+                        <Tabs.Trigger value="modelCalls">
+                          <div class="flex items-center gap-1.5">Model Calls</div>
                         </Tabs.Trigger>
                       </Show>
                       <Show when={contextOpen()}>
@@ -409,8 +409,8 @@ export function SessionSidePanel(props: {
                   </Show>
 
                   <Show when={reviewTab() && !!props.sessionID}>
-                    <Tabs.Content value="modelView" class="flex flex-col h-full overflow-hidden contain-strict">
-                      <Show when={activeTab() === "modelView"}>
+                    <Tabs.Content value="modelCalls" class="flex flex-col h-full overflow-hidden contain-strict">
+                      <Show when={activeTab() === "modelCalls"}>
                         <div class="h-full overflow-auto p-3 font-mono text-11 select-text">
                           <Show when={modelIoItems().length > 0} fallback={
                             <div class="text-text-weak p-4 text-center">No model I/O yet. Send a message first.</div>
