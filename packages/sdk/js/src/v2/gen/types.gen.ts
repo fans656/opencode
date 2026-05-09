@@ -15,6 +15,7 @@ export type Event =
   | EventPermissionReplied
   | EventSessionDiff
   | EventSessionError
+  | EventSessionModelRawIo
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
   | EventQuestionAsked
@@ -786,6 +787,7 @@ export type GlobalEvent = {
     | EventPermissionReplied
     | EventSessionDiff
     | EventSessionError
+    | EventSessionModelRawIo
     | EventInstallationUpdated
     | EventInstallationUpdateAvailable
     | EventQuestionAsked
@@ -2378,6 +2380,17 @@ export type EventSessionError = {
       | StructuredOutputError
       | ContextOverflowError
       | ApiError
+  }
+}
+
+export type EventSessionModelRawIo = {
+  id: string
+  type: "session.model_raw_io"
+  properties: {
+    sessionID: string
+    messageID: string
+    request: string
+    response: string
   }
 }
 
@@ -6047,6 +6060,32 @@ export type PartUpdateResponses = {
 }
 
 export type PartUpdateResponse = PartUpdateResponses[keyof PartUpdateResponses]
+
+export type SessionModelIoData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/model_io"
+}
+
+export type SessionModelIoResponses = {
+  /**
+   * Model IO entries
+   */
+  200: Array<{
+    sessionID: string
+    messageID: string
+    request: string
+    response: string
+  }>
+}
+
+export type SessionModelIoResponse = SessionModelIoResponses[keyof SessionModelIoResponses]
 
 export type SyncStartData = {
   body?: never
