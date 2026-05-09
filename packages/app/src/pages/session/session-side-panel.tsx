@@ -154,10 +154,14 @@ export function SessionSidePanel(props: {
 
       // Input content from the last message
       let inputContent = ""
+      let toolResultItems: Array<{ toolName: string; output: string }> = []
       if (isToolResult) {
-        const output = lastMsg.content?.[0]?.output
-        inputContent = output?.value ?? output?.text ?? ""
-        if (!inputContent && output) inputContent = JSON.stringify(output)
+        for (const c of lastMsg.content ?? []) {
+          const out = c.output
+          const text = (out as { value?: string } | undefined)?.value ?? (out as { text?: string } | undefined)?.text ?? ""
+          toolResultItems.push({ toolName: c.toolName ?? "unknown", output: text || JSON.stringify(out ?? "") })
+        }
+        inputContent = toolResultItems.map((t) => `[${t.toolName}] ${t.output}`).join("\n\n")
       } else {
         const lastUser = messages.filter((m) => m.role === "user").pop()
         inputContent = lastUser?.content?.find((c) => c.type === "text")?.text ?? ""
@@ -168,7 +172,7 @@ export function SessionSidePanel(props: {
       const userText = lastUser?.content?.find((c) => c.type === "text")?.text
       const fullTitle = userText ?? (
         toolCalls.length ? toolCalls.map((t) => t.tool).filter(Boolean).join(", ")
-        : isToolResult ? (lastMsg.content?.[0]?.toolName ?? "Tool result")
+        : isToolResult ? (toolResultItems.map((t) => t.toolName).join(", ") || "Tool result")
         : `Round ${id}`
       )
       const title = fullTitle.length > 60 ? fullTitle.slice(0, 60) + "…" : fullTitle
@@ -178,7 +182,7 @@ export function SessionSidePanel(props: {
         icon: isToolResult ? ("tool_result" as const) : ("user" as const),
         title, fullTitle,
         toolNames: toolCalls.length ? toolCalls.map((t) => t.tool).filter(Boolean).join(", ") : undefined,
-        role, inputContent,
+        role, inputContent, toolResultItems,
         contextCount: Math.max(0, messages.length - 1),
         outputParts: displayParts,
         finish: res.finish as string | undefined,
@@ -415,7 +419,7 @@ export function SessionSidePanel(props: {
                               <div class="mb-3 p-2 bg-background-base rounded border border-border-base space-y-1">
                                 <div class="flex items-center justify-between">
                                   <span class="text-text-weak/50 text-9 font-medium">Session Info</span>
-                                  <Tooltip value="Refresh" placement="top" gutter={4} openDelay={0} closeDelay={500}>
+                                  <Tooltip value="Refresh" placement="top" gutter={4} openDelay={500} closeDelay={500}>
                                     <span class="cursor-pointer text-text-weak hover:text-text-base text-10" onClick={() => refetchModelIo()}>↻</span>
                                   </Tooltip>
                                 </div>
@@ -435,18 +439,18 @@ export function SessionSidePanel(props: {
                                   <div class="mb-2 border border-border-base rounded">
                                     <div class="px-2 py-1 bg-background-strong cursor-pointer flex items-center gap-1 hover:bg-background-stronger" onClick={toggle}>
                                       <span class="text-text-weak select-none shrink-0">{isOpen() ? "▾" : "▸"}</span>
-                                      <Tooltip value={kindTip()} placement="top" gutter={4} openDelay={0} closeDelay={500}>
+                                      <Tooltip value={kindTip()} placement="top" gutter={4} openDelay={500} closeDelay={500}>
                                         <span>{info.icon === "tool_result" ? <span class="text-[#7c3aed] text-10">↩</span> : <span class="text-text-weak text-10">👤</span>}</span>
                                       </Tooltip>
-                                      <Tooltip value={info.fullTitle} placement="top" gutter={4} openDelay={0} closeDelay={500}>
+                                      <Tooltip value={info.fullTitle} placement="top" gutter={4} openDelay={500} closeDelay={500}>
                                         <span class="text-text-base truncate max-w-48" classList={{"text-text-weak": !info.role || info.role === "unknown"}}>{info.title}</span>
                                       </Tooltip>
                                       <Show when={info.toolNames}>
-                                        <Tooltip value={`Tool: ${info.toolNames}`} placement="top" gutter={4} openDelay={0} closeDelay={500}>
+                                        <Tooltip value={`Tool: ${info.toolNames}`} placement="top" gutter={4} openDelay={500} closeDelay={500}>
                                           <span class="text-[#d97706] text-10 shrink-0 truncate max-w-24 cursor-default">🔧 {info.toolNames}</span>
                                         </Tooltip>
                                       </Show>
-                                      <Tooltip value={`Message ID: ${info.messageID}`} placement="top" gutter={4} class="ml-auto" openDelay={0} closeDelay={500}>
+                                      <Tooltip value={`Message ID: ${info.messageID}`} placement="top" gutter={4} class="ml-auto" openDelay={500} closeDelay={500}>
                                         <span class="text-text-weak/50 text-8 shrink-0">{info.id}</span>
                                       </Tooltip>
                                     </div>
@@ -465,12 +469,28 @@ export function SessionSidePanel(props: {
                                                 <span class="text-text-base">{info.contextCount} previous message(s)</span>
                                               </div>
                                             </Show>
-                                            <div class="flex items-start gap-2">
-                                              <span class="text-text-weak shrink-0 w-14">Content</span>
-                                              <div class="min-w-0">
-                                                <pre class="text-text-base whitespace-pre-wrap break-all max-h-48 overflow-auto">{info.inputContent}</pre>
+                                            {info.toolResultItems?.length ? (
+                                              <div class="flex items-start gap-2">
+                                                <span class="text-text-weak shrink-0 w-14">Output</span>
+                                                <div class="min-w-0 space-y-2">
+                                                  <For each={info.toolResultItems}>
+                                                    {(tr) => (
+                                                      <div>
+                                                        <span class="text-[#7c3aed] text-10 font-medium">{tr.toolName}</span>
+                                                        <pre class="text-text-base whitespace-pre-wrap break-all max-h-32 overflow-auto mt-0.5">{tr.output}</pre>
+                                                      </div>
+                                                    )}
+                                                  </For>
+                                                </div>
                                               </div>
-                                            </div>
+                                            ) : (
+                                              <div class="flex items-start gap-2">
+                                                <span class="text-text-weak shrink-0 w-14">Content</span>
+                                                <div class="min-w-0">
+                                                  <pre class="text-text-base whitespace-pre-wrap break-all max-h-48 overflow-auto">{info.inputContent}</pre>
+                                                </div>
+                                              </div>
+                                            )}
                                           </div>
                                           <details class="mt-2">
                                             <summary class="text-text-weak cursor-pointer text-10">Raw Request</summary>
