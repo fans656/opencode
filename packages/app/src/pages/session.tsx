@@ -521,6 +521,13 @@ export default function Page() {
     deferRender: false,
   })
 
+  const [modelIoHistory] = createResource(
+    () => (store.modelView && params.id ? params.id : false),
+    async (id: string) => {
+      return sdk.client.session.modelIo({ sessionID: id }).then((r) => r.data ?? [])
+    },
+  )
+
   const [followup, setFollowup] = persisted(
     Persist.workspace(sdk.directory, "followup", ["followup.v1"]),
     createStore<{
@@ -1906,7 +1913,7 @@ export default function Page() {
             </Switch>
           }>
             <div class="h-full overflow-auto p-4 font-mono text-12">
-              <For each={(sync.data.model_io?.[params.id!]) ?? []}>
+              <For each={modelIoHistory() ?? (sync.data.model_io?.[params.id!] ?? [])}>
                 {(item) => (
                   <div class="mb-6 border border-border-base rounded">
                     <div class="px-3 py-1 bg-background-strong text-text-weak text-11 font-medium">

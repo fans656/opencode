@@ -362,6 +362,7 @@ export function applyDirectoryEvent(input: {
     }
     case "session.model_raw_io": {
       const props = event.properties as { sessionID: string; messageID: string; request: string; response: string }
+      console.debug("[DEBUG] reducer received model_raw_io", { sessionID: props.sessionID, messageID: props.messageID })
       input.setStore(
         "model_io",
         props.sessionID,
