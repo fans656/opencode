@@ -110,7 +110,7 @@ export function SessionSidePanel(props: {
     </div>
   )
 
-  const [modelIoRes] = createResource(
+  const [modelIoRes, { refetch: refetchModelIo }] = createResource(
     () => props.sessionID ?? false,
     (id: string) => sdk.client.session.modelIo({ sessionID: id }).then((r) => r.data ?? []),
   )
@@ -413,6 +413,12 @@ export function SessionSidePanel(props: {
                           }>
                             <Show when={meta()}>{(m) => (
                               <div class="mb-3 p-2 bg-background-base rounded border border-border-base space-y-1">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-text-weak/50 text-9 font-medium">Session Info</span>
+                                  <Tooltip value="Refresh" placement="top" gutter={4} openDelay={0} closeDelay={500}>
+                                    <span class="cursor-pointer text-text-weak hover:text-text-base text-10" onClick={() => refetchModelIo()}>↻</span>
+                                  </Tooltip>
+                                </div>
                                 <div class="flex items-center gap-2"><span class="text-text-weak">Session</span><span class="text-text-base font-medium">{props.sessionID}</span></div>
                                 <Show when={m().model}><div class="flex items-center gap-2"><span class="text-text-weak">Model</span><span class="text-text-base">{m().model!.providerID}/{m().model!.modelID}</span></div></Show>
                                 <Show when={m().agent}><div class="flex items-center gap-2"><span class="text-text-weak">Agent</span><span class="text-text-base">{m().agent}</span></div></Show>
@@ -433,11 +439,11 @@ export function SessionSidePanel(props: {
                                         <span>{info.icon === "tool_result" ? <span class="text-[#7c3aed] text-10">↩</span> : <span class="text-text-weak text-10">👤</span>}</span>
                                       </Tooltip>
                                       <Tooltip value={info.fullTitle} placement="top" gutter={4} openDelay={0} closeDelay={500}>
-                                        <span class="text-text-base truncate" classList={{"text-text-weak": !info.role || info.role === "unknown"}}>{info.title}</span>
+                                        <span class="text-text-base truncate max-w-48" classList={{"text-text-weak": !info.role || info.role === "unknown"}}>{info.title}</span>
                                       </Tooltip>
                                       <Show when={info.toolNames}>
                                         <Tooltip value={`Tool: ${info.toolNames}`} placement="top" gutter={4} openDelay={0} closeDelay={500}>
-                                          <span class="text-[#d97706] text-10 shrink-0 ml-1 cursor-default">🔧 {info.toolNames}</span>
+                                          <span class="text-[#d97706] text-10 shrink-0 truncate max-w-24 cursor-default">🔧 {info.toolNames}</span>
                                         </Tooltip>
                                       </Show>
                                       <Tooltip value={`Message ID: ${info.messageID}`} placement="top" gutter={4} class="ml-auto" openDelay={0} closeDelay={500}>
