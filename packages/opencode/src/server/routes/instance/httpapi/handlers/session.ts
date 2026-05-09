@@ -38,6 +38,8 @@ import {
   UpdatePayload,
 } from "../groups/session"
 import * as SessionError from "./session-errors"
+import { Global } from "@opencode-ai/core/global"
+import path from "path"
 
 export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", (handlers) =>
   Effect.gen(function* () {
@@ -274,10 +276,12 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       yield* promptSvc.prompt({ ...ctx.payload, sessionID: ctx.params.sessionID }).pipe(
         Effect.catchCause((cause) =>
           Effect.gen(function* () {
-            yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
+            const msg = Cause.pretty(cause)
+            console.error(">>> prompt_async failed:", msg)
+            yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, msg })
             yield* bus.publish(Session.Event.Error, {
               sessionID: ctx.params.sessionID,
-              error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
+              error: new NamedError.Unknown({ message: msg }).toObject(),
             })
           }),
         ),
@@ -351,6 +355,19 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       return yield* session.updatePart(payload)
     })
 
+    const modelIo = Effect.fn("SessionHttpApi.modelIo")(function* (ctx: { params: { sessionID: SessionID } }) {
+      const dir = path.join(Global.Path.data, "model_io")
+      const file = path.join(dir, ctx.params.sessionID + ".jsonl")
+      const exists = yield* Effect.promise(() => Bun.file(file).exists())
+      if (!exists) return [] as { sessionID: string; messageID: string; request: string; response: string }[]
+      const text = yield* Effect.promise(() => Bun.file(file).text())
+      return text
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line)) as { sessionID: string; messageID: string; request: string; response: string }[]
+    })
+
     return handlers
       .handle("list", list)
       .handle("status", status)
@@ -379,5 +396,6 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handle("deleteMessage", deleteMessage)
       .handle("deletePart", deletePart)
       .handle("updatePart", updatePart)
+      .handle("modelIo", modelIo)
   }),
 )

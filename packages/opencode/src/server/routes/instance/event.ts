@@ -70,6 +70,9 @@ export const EventRoutes = () =>
 
         const unsub = Bus.subscribeAll((event) => {
           q.push(JSON.stringify(event))
+          if (event.type === "session.model_raw_io") {
+            log.info("[DEBUG] SSE emitting model_raw_io", { sessionID: (event.properties as any).sessionID })
+          }
           if (event.type === Bus.InstanceDisposed.type) {
             stop()
           }

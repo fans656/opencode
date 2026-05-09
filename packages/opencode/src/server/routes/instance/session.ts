@@ -18,6 +18,8 @@ import { Agent } from "@/agent/agent"
 import { Snapshot } from "@/snapshot"
 import { Command } from "@/command"
 import * as Log from "@opencode-ai/core/util/log"
+import { Global } from "@opencode-ai/core/global"
+import path from "path"
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
@@ -1120,5 +1122,43 @@ export const SessionRoutes = lazy(() =>
           })
           return true
         }),
+    )
+    .get(
+      "/:sessionID/model_io",
+      describeRoute({
+        summary: "Get model IO",
+        description: "Retrieve raw model input/output history for a session.",
+        operationId: "session.model_io",
+        responses: {
+          200: {
+            description: "Model IO",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.array(
+                    z.object({
+                      sessionID: z.string(),
+                      messageID: z.string(),
+                      request: z.string(),
+                      response: z.string(),
+                    }),
+                  ),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      validator("param", z.object({ sessionID: SessionID.zod })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const dir = path.join(Global.Path.data, "model_io")
+        const file = path.join(dir, sessionID + ".jsonl")
+        const exists = await Bun.file(file).exists()
+        if (!exists) return c.json([])
+        const text = await Bun.file(file).text()
+        const lines = text.trim().split("\n").filter(Boolean)
+        return c.json(lines.map((line) => JSON.parse(line)))
+      },
     ),
 )

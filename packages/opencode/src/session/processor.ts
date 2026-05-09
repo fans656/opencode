@@ -23,6 +23,9 @@ import { isRecord } from "@/util/record"
 import { EventV2 } from "@/v2/event"
 import { SessionEvent } from "@/v2/session-event"
 import { Modelv2 } from "@/v2/model"
+import { Global } from "@opencode-ai/core/global"
+import { appendFile, mkdir } from "fs/promises"
+import path from "path"
 import * as DateTime from "effect/DateTime"
 
 const DOOM_LOOP_THRESHOLD = 3
@@ -740,7 +743,7 @@ export const layer: Layer.Layer<
             tokens: ctx.assistantMessage.tokens,
             cost: ctx.assistantMessage.cost,
             error: ctx.assistantMessage.error,
-            parts: ctx.assistantMessage.parts.map((p) => {
+            parts: (ctx.assistantMessage.parts ?? MessageV2.parts(ctx.assistantMessage.id)).map((p) => {
               if (p.type === "text") return { type: "text", text: p.text }
               if (p.type === "tool") return { type: "tool", tool: p.tool, state: p.state }
               if (p.type === "reasoning") return { type: "reasoning", text: p.text }
@@ -753,6 +756,18 @@ export const layer: Layer.Layer<
             request: requestSnapshot,
             response: responseSnapshot,
           })
+          slog.info("[DEBUG] ModelRawIO published")
+
+          const dir = path.join(Global.Path.data, "model_io")
+          const file = path.join(dir, ctx.sessionID + ".jsonl")
+          const line = JSON.stringify({
+            sessionID: ctx.sessionID,
+            messageID: ctx.assistantMessage.id,
+            request: requestSnapshot,
+            response: responseSnapshot,
+          })
+          yield* Effect.promise(() => mkdir(dir, { recursive: true }))
+          yield* Effect.promise(() => appendFile(file, line + "\n"))
 
           if (ctx.needsCompaction) return "compact"
           if (ctx.blocked || ctx.assistantMessage.error) return "stop"

@@ -95,6 +95,7 @@ export const SessionPaths = {
   deleteMessage: `${root}/:sessionID/message/:messageID`,
   deletePart: `${root}/:sessionID/message/:messageID/part/:partID`,
   updatePart: `${root}/:sessionID/message/:messageID/part/:partID`,
+  modelIo: `${root}/:sessionID/model_io`,
 } as const
 
 export const SessionApi = HttpApi.make("session")
@@ -409,6 +410,26 @@ export const SessionApi = HttpApi.make("session")
           OpenApi.annotations({
             identifier: "part.update",
             description: "Update a part in a message.",
+          }),
+        ),
+        HttpApiEndpoint.get("modelIo", SessionPaths.modelIo, {
+          params: { sessionID: SessionID },
+          success: described(
+            Schema.Array(
+              Schema.Struct({
+                sessionID: Schema.String,
+                messageID: Schema.String,
+                request: Schema.String,
+                response: Schema.String,
+              }),
+            ),
+            "Model IO entries",
+          ),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "session.model_io",
+            summary: "Get model IO",
+            description: "Retrieve raw model input/output history for a session.",
           }),
         ),
       )
