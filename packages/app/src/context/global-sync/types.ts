@@ -66,6 +66,9 @@ export type State = {
   lsp: LspStatus[]
   vcs: VcsInfo | undefined
   limit: number
+  model_io: {
+    [sessionID: string]: { messageID: string; request: string; response: string }[]
+  }
   message: {
     [sessionID: string]: Message[]
   }

@@ -341,6 +341,15 @@ export const Event = {
       error: MessageV2.Assistant.fields.error,
     }),
   ),
+  ModelRawIO: BusEvent.define(
+    "session.model_raw_io",
+    Schema.Struct({
+      sessionID: SessionID,
+      messageID: MessageID,
+      request: Schema.String,
+      response: Schema.String,
+    }),
+  ),
 }
 
 export function plan(input: { slug: string; time: { created: number } }, instance: InstanceContext) {

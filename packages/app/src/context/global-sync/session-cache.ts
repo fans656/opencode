@@ -18,6 +18,7 @@ type SessionCache = {
   part: Record<string, Part[] | undefined>
   permission: Record<string, PermissionRequest[] | undefined>
   question: Record<string, QuestionRequest[] | undefined>
+  model_io: Record<string, { messageID: string; request: string; response: string }[] | undefined>
 }
 
 export function dropSessionCaches(store: SessionCache, sessionIDs: Iterable<string>) {
@@ -37,6 +38,7 @@ export function dropSessionCaches(store: SessionCache, sessionIDs: Iterable<stri
     delete store.session_status[sessionID]
     delete store.permission[sessionID]
     delete store.question[sessionID]
+    delete store.model_io[sessionID]
   }
 }
 

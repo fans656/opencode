@@ -360,5 +360,17 @@ export function applyDirectoryEvent(input: {
       input.loadLsp()
       break
     }
+    case "session.model_raw_io": {
+      const props = event.properties as { sessionID: string; messageID: string; request: string; response: string }
+      input.setStore(
+        "model_io",
+        props.sessionID,
+        produce((draft) => {
+          if (!draft) return [{ messageID: props.messageID, request: props.request, response: props.response }]
+          draft.push({ messageID: props.messageID, request: props.request, response: props.response })
+        }),
+      )
+      break
+    }
   }
 }

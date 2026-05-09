@@ -675,6 +675,14 @@ export const layer: Layer.Layer<
         ctx.needsCompaction = false
         ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
 
+        const requestSnapshot = JSON.stringify({
+          model: { providerID: streamInput.model.providerID, modelID: streamInput.model.id },
+          agent: streamInput.agent.name,
+          system: streamInput.system,
+          messages: streamInput.messages,
+          tools: Object.keys(streamInput.tools).filter((k) => k !== "invalid"),
+        })
+
         return yield* Effect.gen(function* () {
           yield* Effect.gen(function* () {
             ctx.currentText = undefined
@@ -726,6 +734,25 @@ export const layer: Layer.Layer<
             Effect.catch(halt),
             Effect.ensuring(cleanup()),
           )
+
+          const responseSnapshot = JSON.stringify({
+            finish: ctx.assistantMessage.finish,
+            tokens: ctx.assistantMessage.tokens,
+            cost: ctx.assistantMessage.cost,
+            error: ctx.assistantMessage.error,
+            parts: ctx.assistantMessage.parts.map((p) => {
+              if (p.type === "text") return { type: "text", text: p.text }
+              if (p.type === "tool") return { type: "tool", tool: p.tool, state: p.state }
+              if (p.type === "reasoning") return { type: "reasoning", text: p.text }
+              return { type: p.type }
+            }),
+          })
+          yield* bus.publish(Session.Event.ModelRawIO, {
+            sessionID: ctx.sessionID,
+            messageID: ctx.assistantMessage.id,
+            request: requestSnapshot,
+            response: responseSnapshot,
+          })
 
           if (ctx.needsCompaction) return "compact"
           if (ctx.blocked || ctx.assistantMessage.error) return "stop"
